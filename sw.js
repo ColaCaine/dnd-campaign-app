@@ -21,7 +21,12 @@ self.addEventListener( "install" , ( event ) =>
 			"img/icon_120.png",
 			"img/icon_180.png",
 			"img/icon_192.png",
-			"img/icon_512.png"
+			"img/icon_512.png",
+			"the-closet.html",
+			"w-i-p.html",
+			"join-our-discord-server.html",
+			"major-news.html",
+			"license.html"
 		] );
 	}));
     console.log( "sw > installed" );
