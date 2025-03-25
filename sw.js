@@ -1,60 +1,47 @@
-self.importScripts( "config.js" );
+// This is the "Offline page" service worker
 
-// cache name for cache versioning
-var cacheName = "v"+serviceWorkerCacheVersion+":static";
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
 
-// when the service is installed
-self.addEventListener( "install" , ( event ) =>
-{
-	// cache all required files for offline use
-	event.waitUntil( caches.open( cacheName ).then( ( cache ) =>
-	{
-		return cache.addAll( [
-            "/",
-			"config.js",
-            "index.html",
-			"manifest.json",
-			"style.css",
-			"src/App.js",
-			"src/main.js",
-			"img/favicon.png",
-			"img/icon_120.png",
-			"img/icon_180.png",
-			"img/icon_192.png",
-			"img/icon_512.png",
-			"the-closet.html",
-			"w-i-p.html",
-			"join-our-discord-server.html",
-			"major-news.html",
-			"license.html"
-		] );
-	}));
-    console.log( "sw > installed" );
-    // activate the new service worker version immediately
+const CACHE = "pwabuilder-page";
+
+// TODO: replace the following with the correct offline fallback page i.e.: const offlineFallbackPage = "offline.html";
+const offlineFallbackPage = "ToDo-replace-this-name.html";
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
+  }
 });
 
-
-
-// when a new version of the service worker is activated
-addEventListener( "activate" , ( event ) => 
-{
-    // delete the old cache
-	event.waitUntil( caches.keys().then( ( keyList ) => Promise.all( keyList.map( ( key ) => 
-	{
-		if ( key !== cacheName ) return caches.delete( key );
-    }))));
-    console.log( "sw > activated" );
+self.addEventListener('install', async (event) => {
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((cache) => cache.add(offlineFallbackPage))
+  );
 });
 
+if (workbox.navigationPreload.isSupported()) {
+  workbox.navigationPreload.enable();
+}
 
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+	  event.respondWith((async () => {
+      try {
+        const preloadResp = await event.preloadResponse;
 
-// when the browser fetches a URL
-self.addEventListener( "fetch" , ( event ) =>
-{
-    // cache first caching - only go to the network if no cache match was found, other caching strategies can be used too
-    event.respondWith( caches.match( event.request ).then( ( response ) => 
-    {
-        return response || fetch( event.request );
-    }));
+        if (preloadResp) {
+          return preloadResp;
+        }
+
+        const networkResp = await fetch(event.request);
+        return networkResp;
+      } catch (error) {
+
+        const cache = await caches.open(CACHE);
+        const cachedResp = await cache.match(offlineFallbackPage);
+        return cachedResp;
+      }
+    })());
+  }
 });
